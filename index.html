@@ -429,7 +429,12 @@ function box(group,mat,x0,x1,y0,y1,z0,z1,o){o=o||{};const b=bucket(group,mat,o.o
 }
 function quad(group,mat,P,n,U){const b=bucket(group,mat,false);for(const i of[0,1,2,0,2,3]){b.pos.push(...P[i]);b.nrm.push(...n);b.uv.push(...U[i])}}
 const _m=new THREE.Matrix4(),_q=new THREE.Quaternion(),_e=new THREE.Euler(),_v=new THREE.Vector3(),_s=new THREE.Vector3(),_nm=new THREE.Matrix3();
-const GEO={box:(w,h,d)=>new THREE.BoxGeometry(w,h,d),cyl:(rt,rb,h,s)=>new THREE.CylinderGeometry(rt,rb,h,s||16),sph:(r,w,h)=>new THREE.SphereGeometry(r,w||16,h||12),cone:(r,h,s)=>new THREE.ConeGeometry(r,h,s||16),tor:(r,t,a,b)=>new THREE.TorusGeometry(r,t,a||8,b||20)};
+const GEO={box:(w,h,d)=>new THREE.BoxGeometry(w,h,d),cyl:(rt,rb,h,s)=>new THREE.CylinderGeometry(rt,rb,h,s||16),sph:(r,w,h)=>new THREE.SphereGeometry(r,w||16,h||12),cone:(r,h,s)=>new THREE.ConeGeometry(r,h,s||16),tor:(r,t,a,b)=>new THREE.TorusGeometry(r,t,a||8,b||20),rbox:(w,h,d,r)=>rboxGeo(w,h,d,r)};
+// boîte aux arêtes arrondies (look jouet en plastique), mise en cache
+const RBOX={};function rboxGeo(w,h,d,r){r=Math.min(r,w/2,h/2,d/2);const key=[w,h,d,r].join();if(RBOX[key])return RBOX[key];
+  const g=new THREE.BoxGeometry(w,h,d,6,6,6),p=g.attributes.position,v=new THREE.Vector3(),c=new THREE.Vector3(),hw=w/2-r,hh=h/2-r,hd=d/2-r;
+  for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);c.set(clamp(v.x,-hw,hw),clamp(v.y,-hh,hh),clamp(v.z,-hd,hd));v.sub(c);if(v.lengthSq()>1e-9)v.normalize().multiplyScalar(r);v.add(c);p.setXYZ(i,v.x,v.y,v.z)}
+  g.computeVertexNormals();return RBOX[key]=g}
 function geo(group,mat,g,x,y,z,yaw,sx,sy,sz,pitch,roll,ol){const b=bucket(group,mat,ol);const G=g.index?g.toNonIndexed():g;
   _e.set(pitch||0,yaw||0,roll||0,'YXZ');_q.setFromEuler(_e);_m.compose(_v.set(x,y,z),_q,_s.set(sx||1,sy||1,sz||1));_nm.getNormalMatrix(_m);
   const p=G.attributes.position,n=G.attributes.normal,u=G.attributes.uv;for(let i=0;i<p.count;i++){_v.fromBufferAttribute(p,i).applyMatrix4(_m);b.pos.push(_v.x,_v.y,_v.z);_v.fromBufferAttribute(n,i).applyMatrix3(_nm).normalize();b.nrm.push(_v.x,_v.y,_v.z);if(u)b.uv.push(u.getX(i),u.getY(i));else b.uv.push(0,0)}}
@@ -493,7 +498,7 @@ class Fr{constructor(k,x,z,r){this.k=k;this.gn='F'+k;this.x=x;this.z=z;this.r=r&
   pt(u,y,v){const[a,b]=this.w(u,v);return new THREE.Vector3(a,this.y+y,b)}
 }
 const P={
-  sofa(f,c){f.b(c,-1.1,1.1,.2,.55,-.45,.45);f.b(c,-1.1,1.1,.2,1.05,-.45,-.2);f.b(c,-1.25,-1.05,.2,.8,-.45,.45);f.b(c,1.05,1.25,.2,.8,-.45,.45);f.b(shade(c,.25),-1,-.02,.55,.68,-.2,.4);f.b(shade(c,.25),.02,1,.55,.68,-.2,.4);for(const u of[-1.1,1.1])f.g('#5a3a2a',GEO.cyl(.05,.04,.2,8),u,.1,0);f.c(-1.25,1.25,-.45,.45)},
+  sofa(f,c){{const L=shade(c,.18);f.g(c,GEO.rbox(2.5,.32,.9,.12),0,.34,0);for(const u of[-1.12,1.12])f.g(c,GEO.rbox(.32,.62,.92,.15),u,.5,0);for(let i=-1;i<=1;i++){f.g(L,GEO.rbox(.7,.2,.62,.09),i*.7,.6,.08);f.g(L,GEO.rbox(.7,.55,.22,.1),i*.7,.88,-.3,0,1,1,1,-.12)}for(const[u,v]of[[-1,-1],[1,-1],[1,1],[-1,1]])f.g('#c8843a',GEO.sph(.09,10,8),u*1.05,.09,v*.32);f.c(-1.25,1.25,-.45,.45);return}f.b(c,-1.1,1.1,.2,.55,-.45,.45);f.b(c,-1.1,1.1,.2,1.05,-.45,-.2);f.b(c,-1.25,-1.05,.2,.8,-.45,.45);f.b(c,1.05,1.25,.2,.8,-.45,.45);f.b(shade(c,.25),-1,-.02,.55,.68,-.2,.4);f.b(shade(c,.25),.02,1,.55,.68,-.2,.4);for(const u of[-1.1,1.1])f.g('#5a3a2a',GEO.cyl(.05,.04,.2,8),u,.1,0);f.c(-1.25,1.25,-.45,.45)},
   armchair(f,c){f.b(c,-.45,.45,.2,.55,-.4,.4);f.b(c,-.45,.45,.2,1.05,-.4,-.18);f.b(c,-.55,-.4,.2,.8,-.4,.4);f.b(c,.4,.55,.2,.8,-.4,.4);f.b(shade(c,.25),-.4,.4,.55,.66,-.18,.36);f.c(-.55,.55,-.4,.4)},
   table(f,c,w,d){w=w||1.4;d=d||.8;f.b(c,-w/2,w/2,.72,.8,-d/2,d/2);for(const[u,v]of[[-1,-1],[1,-1],[1,1],[-1,1]])f.b(shade(c,-.15),u*w/2-.06*u-.04,u*w/2-.06*u+.04,0,.72,v*d/2-.06*v-.04,v*d/2-.06*v+.04);f.c(-w/2,w/2,-d/2,d/2,'low',.8)},
   chair(f,c){f.b(c,-.22,.22,.42,.48,-.22,.22);f.b(c,-.22,.22,.48,.95,-.24,-.18);for(const[u,v]of[[-1,-1],[1,-1],[1,1],[-1,1]])f.b(shade(c,-.2),u*.18-.025,u*.18+.025,0,.42,v*.18-.025,v*.18+.025)},
@@ -501,17 +506,24 @@ const P={
   tv(f,screen){f.b('#6b4a8a',-.8,.8,0,.5,-.25,.25);f.b(INK,-.62,.62,.6,1.35,-.05,.03);f.img(screen,0,.975,.035,1.14,.66);f.b('#3a3a4a',-.08,.08,.5,.6,-.05,.03);f.c(-.8,.8,-.25,.25)},
   shelf(f,c){f.b(c,-.6,.6,0,1.9,-.18,.18);for(let i=0;i<4;i++){let u=-.52;while(u<.45){const w=rand(.05,.12),h=rand(.25,.38);f.b(pick(['#ff5a5a','#4cc3ff','#ffd23f','#5bd04a','#b38cff','#ff9e3f']),u,u+w,.12+i*.45,.12+i*.45+h,-.12,.14,{ol:false});u+=w+.01}}f.c(-.6,.6,-.18,.18,'furn',2)},
   bed(f,cov,w){w=w||1.6;f.b('#8a5a3a',-w/2-.06,w/2+.06,0,.35,-1,1);f.b('#ffffff',-w/2,w/2,.35,.55,-.95,.95);f.b(cov,-w/2-.02,w/2+.02,.4,.6,-.3,.97);f.b('#8a5a3a',-w/2-.06,w/2+.06,0,1.1,-1.08,-.95);for(const s of(w>1.2?[-1,1]:[0]))f.b('#ffffff',s*w/4-.32,s*w/4+.32,.55,.72,-.9,-.55);f.c(-w/2-.06,w/2+.06,-1.08,1)},
-  heartBed(f){f.b('#ffffff',-1.2,1.2,0,.35,-1.1,1);f.b('#ff9cc8',-1.15,1.15,.35,.65,-.9,1.02);f.g('#ff3d7f',GEO.sph(.7,20,14),-.45,1.4,-1.05,0,1,1,.35);f.g('#ff3d7f',GEO.sph(.7,20,14),.45,1.4,-1.05,0,1,1,.35);f.g('#ff3d7f',GEO.cone(.98,1.1,4),0,.85,-1.05,Math.PI/4,1,1,.35,Math.PI,0);f.c(-1.2,1.2,-1.15,1)},
+  heartBed(f){{const W='#fdf6fb',PK='#ff2f8e';f.g(W,GEO.rbox(2.3,.36,2,.08),0,.3,0);f.g('#ffffff',GEO.rbox(2.2,.22,1.9,.1),0,.55,0);f.g(PK,GEO.rbox(2.3,.16,1.35,.08),0,.66,.33);f.g(PK,GEO.rbox(2.32,.4,.06,.03),0,.48,1.02);for(const u of[-.5,.5])f.g('#ffffff',GEO.rbox(.8,.2,.42,.1),u,.74,-.72);
+    for(const s of[-1,1]){f.g(W,GEO.sph(.72,20,14),s*.46,1.45,-1.1,0,1,1,.25);f.g(PK,GEO.sph(.6,20,14),s*.4,1.47,-.93,0,1,1,.22)}f.g(W,GEO.cone(1.02,1.15,4),0,.88,-1.1,Math.PI/4,1,1,.25,Math.PI,0);f.g(PK,GEO.cone(.86,.98,4),0,.95,-.93,Math.PI/4,1,1,.22,Math.PI,0);for(const[u,y]of[[-.35,1.5],[.35,1.5],[0,1.15]])f.g('#ff9ccb',GEO.sph(.05,8,6),u,y,-.8);
+    f.g(W,GEO.rbox(2.2,.55,.12,.05),0,.55,1.02);for(const[u,v,h]of[[-1.12,-1.05,1.3],[1.12,-1.05,1.3],[-1.12,1.02,1.05],[1.12,1.02,1.05]]){f.g(W,GEO.cyl(.1,.1,h,12),u,h/2,v);for(const k of[-1,1])f.g(PK,GEO.sph(.08,10,8),u+k*.05,h+.08,v);f.g(PK,GEO.cone(.11,.12,10),u,h+.02,v,0,1,1,1,Math.PI,0)}
+    for(const k of[-1,1])f.g(PK,GEO.sph(.11,12,10),k*.1,.62,1.09,0,1,1,.4);f.g(PK,GEO.cone(.16,.18,10),0,.5,1.09,0,1,1,.4,Math.PI,0);f.c(-1.2,1.2,-1.15,1.1);return}f.b('#ffffff',-1.2,1.2,0,.35,-1.1,1);f.b('#ff9cc8',-1.15,1.15,.35,.65,-.9,1.02);f.g('#ff3d7f',GEO.sph(.7,20,14),-.45,1.4,-1.05,0,1,1,.35);f.g('#ff3d7f',GEO.sph(.7,20,14),.45,1.4,-1.05,0,1,1,.35);f.g('#ff3d7f',GEO.cone(.98,1.1,4),0,.85,-1.05,Math.PI/4,1,1,.35,Math.PI,0);f.c(-1.2,1.2,-1.15,1)},
   wardrobe(f,c){f.b(c,-.6,.6,0,2.1,-.3,.3);f.b(shade(c,-.15),-.02,.02,.1,2,.3,.32,{ol:false});for(const u of[-.12,.12])f.g('#ffd23f',GEO.sph(.04,8,6),u,1.05,.33);f.c(-.6,.6,-.3,.3,'furn',2.2)},
   desk(f,c){f.b(c,-.75,.75,.72,.78,-.38,.38);f.b(shade(c,-.15),-.75,-.69,0,.72,-.38,.38);f.b(shade(c,-.15),.69,.75,0,.72,-.38,.38);f.c(-.75,.75,-.38,.38,'low',.8)},
   monitor(f,u,v,screen,w){w=w||.62;f.b(INK,u-w/2,u+w/2,.9,.9+w*.6,v-.04,v+.02);f.img(screen,u,.9+w*.3,v+.025,w-.06,w*.6-.06);f.b('#3a3a4a',u-.04,u+.04,.78,.9,v-.03,v+.01)},
   officeChair(f,c){f.g(c,GEO.cyl(.25,.25,.08,16),0,.48,0);f.b(c,-.24,.24,.5,1.1,-.3,-.22);f.g('#3a3a4a',GEO.cyl(.03,.03,.4,8),0,.25,0);f.g('#3a3a4a',GEO.cyl(.25,.25,.04,5),0,.04,0)},
-  plant(f,u,v,s){s=s||1;f.g('#e8783a',GEO.cyl(.2*s,.15*s,.35*s,12),u,.175*s,v);f.g('#3fb53a',GEO.sph(.34*s,12,10),u,.6*s,v);f.g('#5bd04a',GEO.sph(.24*s,12,10),u+.15*s,.8*s,v-.05);f.c(u-.22*s,u+.22*s,v-.22*s,v+.22*s)},
+  plant(f,u,v,s){s=s||1;{f.g('#f07a2a',GEO.cyl(.24*s,.18*s,.32*s,16),u,.16*s,v);f.g('#f58a3a',GEO.tor(.235*s,.05*s,8,20),u,.32*s,v,0,1,1,1,Math.PI/2);f.g('#6a4426',GEO.cyl(.2*s,.2*s,.02,14),u,.31*s,v,0,1,1,1,0,0,false);f.g('#5a8a2a',GEO.cyl(.03*s,.04*s,.45*s,8),u,.5*s,v);
+    for(let i=0;i<16;i++){const a=i*2.4,r=(.12+(i%3)*.1)*s,y=(.7+(i%4)*.1)*s;f.g(i%2?'#4fbf45':'#5fd052',GEO.sph(.11*s,10,8),u+Math.cos(a)*r,y,v+Math.sin(a)*r,a,1.2,.7,1)}f.c(u-.22*s,u+.22*s,v-.22*s,v+.22*s);return}f.g('#e8783a',GEO.cyl(.2*s,.15*s,.35*s,12),u,.175*s,v);f.g('#3fb53a',GEO.sph(.34*s,12,10),u,.6*s,v);f.g('#5bd04a',GEO.sph(.24*s,12,10),u+.15*s,.8*s,v-.05);f.c(u-.22*s,u+.22*s,v-.22*s,v+.22*s)},
   rug(f,c,w,d){f.b(c,-w/2,w/2,0,.025,-d/2,d/2,{ol:false})},
   frame(f,img,u,y,v,w,h){f.b('#ffd23f',u-w/2-.06,u+w/2+.06,y-h/2-.06,y+h/2+.06,v,v+.04);f.img(img,u,y,v+.045,w,h)},
   lampFloor(f,u,v){f.g('#3a3a4a',GEO.cyl(.03,.03,1.5,8),u,.75,v);f.g('#ffd23f',GEO.cone(.28,.35,16),u,1.6,v,0,1,1,1,Math.PI);f.g('#3a3a4a',GEO.cyl(.18,.2,.04,16),u,.02,v)},
-  washer(f,c){f.b(c,-.32,.32,0,.88,-.32,.32);f.g('#8fd8ff',GEO.cyl(.2,.2,.03,20),0,.45,.33,0,1,1,1,Math.PI/2);f.g('#c0c0d0',GEO.tor(.21,.03,8,20),0,.45,.335,0,1,1,1);f.b('#ff5a5a',.15,.25,.75,.82,.32,.34,{ol:false});f.c(-.32,.32,-.32,.32)},
-  fridge(f){f.b('#fdfdfd',-.38,.38,0,1.9,-.33,.33);f.b('#c8c8d8',.28,.32,.95,1.55,.33,.37);f.b('#c8c8d8',-.38,.38,1.25,1.27,.33,.34,{ol:false});f.img('art1',0,1.5,.335,.18,.14);f.c(-.38,.38,-.33,.33,'furn',2)},
+  washer(f,c){{f.g('#ffffff',GEO.rbox(.64,.8,.62,.08),0,.48,0);f.g('#f2f4fa',GEO.rbox(.64,.18,.62,.06),0,.8,0);for(const u of[-.22,.22])for(const v of[-.22,.22])f.g('#3b5fc0',GEO.sph(.06,8,6),u,.05,v);
+    f.g('#3b6fd8',GEO.tor(.2,.045,10,24),0,.45,.32);f.g('#4aa0ff',GEO.cyl(.17,.17,.03,24),0,.45,.31,0,1,1,1,Math.PI/2);f.g('#ff3b2b',GEO.sph(.06,12,10),.21,.62,.31,0,1,1,.6);f.g('#3b6fd8',GEO.cyl(.055,.055,.04,14),0,.8,.31,0,1,1,1,Math.PI/2);
+    [['#ffd23f',.14],['#5bd04a',.2],['#ff8a3a',.26]].forEach(([col,u])=>f.g(col,GEO.sph(.022,8,6),u,.83,.31,0,1,1,1,0,0,false));f.c(-.32,.32,-.32,.32);return}f.b(c,-.32,.32,0,.88,-.32,.32);f.g('#8fd8ff',GEO.cyl(.2,.2,.03,20),0,.45,.33,0,1,1,1,Math.PI/2);f.g('#c0c0d0',GEO.tor(.21,.03,8,20),0,.45,.335,0,1,1,1);f.b('#ff5a5a',.15,.25,.75,.82,.32,.34,{ol:false});f.c(-.32,.32,-.32,.32)},
+  fridge(f){{f.g('#f4f1e8',GEO.rbox(.78,1.75,.66,.16),0,1.0,0);f.g('#8a8f9c',GEO.rbox(.78,.16,.62,.05),0,.08,0);f.g('#5a5f6c',GEO.box(.4,.05,.02),0,.09,.31,0,1,1,1,0,0,false);f.g('#d8d4c8',GEO.box(.012,1.6,.02),0,1.02,.335,0,1,1,1,0,0,false);
+    for(const u of[-.08,.08]){f.g('#a4a8b4',GEO.cyl(.022,.022,.36,8),u,1.2,.38);for(const y of[1.02,1.38])f.g('#a4a8b4',GEO.cyl(.02,.02,.06,8),u,y,.35,0,1,1,1,Math.PI/2)}f.g('#ffd23f',GEO.sph(.05,8,6),-.26,1.45,.34,0,1.6,.6,.4);f.g('#ffc83a',GEO.cone(.05,.06,5),-.16,1.5,.34,0,1,1,.4,Math.PI/2,0);f.c(-.38,.38,-.33,.33,'furn',2);return}f.b('#fdfdfd',-.38,.38,0,1.9,-.33,.33);f.b('#c8c8d8',.28,.32,.95,1.55,.33,.37);f.b('#c8c8d8',-.38,.38,1.25,1.27,.33,.34,{ol:false});f.img('art1',0,1.5,.335,.18,.14);f.c(-.38,.38,-.33,.33,'furn',2)},
   kitchen(f,len,c){f.b(c,-len/2,len/2,0,.86,-.32,.32);f.b('#fff6e0',-len/2-.02,len/2+.02,.86,.92,-.34,.34);for(let u=-len/2+.3;u<len/2;u+=.6)f.g('#ffd23f',GEO.sph(.03,8,6),u,.75,.33,0,1,1,1,0,0,false);f.b(INK,-.3,.3,.92,.94,-.25,.15,{ol:false});for(const[a,b]of[[-.15,-.1],[.15,-.1],[-.15,.08],[.15,.08]])f.g('#ff5a2c',GEO.cyl(.08,.08,.012,14),a,.95,b,0,1,1,1,0,0,false);f.g('#c0c0d0',GEO.cyl(.13,.12,.16,14),-.15,1.03,-.1);f.c(-len/2,len/2,-.34,.34,'low',.95)},
   crate(f,u,y,v,s){f.g('crate',GEO.box(s,s,s),u,y+s/2,v,rand(-.15,.15))},
   piano(f){f.b(INK,-.8,.8,.7,1.05,-.7,.6);f.g(INK,GEO.cyl(.8,.8,.35,24,1,false),0,.875,.6,0,1,1,.55);f.b('#ffffff',-.75,.75,.72,.78,.6,.82);for(let i=0;i<14;i++)f.b(INK,-.7+i*.1,-.66+i*.1,.78,.8,.62,.72,{ol:false});for(const[u,v]of[[-.7,-.6],[.7,-.6],[0,.9]])f.g(INK,GEO.cyl(.05,.05,.7,8),u,.35,v);f.b(INK,-.8,.8,1.05,1.6,-.72,-.68);f.c(-.85,.85,-.75,1.2)},
@@ -671,7 +683,10 @@ function lowerTower(){
 
 /* ===================== Ville ===================== */
 const TREES=[],FOUNTAIN={x:-10,z:29,r:2.7};
-function tree(x,z,s,group){group=group||'city';geo(group,'#a0663a',GEO.cyl(.35*s,.5*s,3*s,10),x,1.5*s,z,0,1,1,1,0,0,true);geo(group,'#3fb53a',GEO.sph(2.1*s,14,12),x,4.1*s,z,0,1,1,1,0,0,true);geo(group,'#5bd04a',GEO.sph(1.4*s,12,10),x+.9*s,4.9*s,z+.5*s,0,1,1,1,0,0,true);TREES.push({x,z,r:2.1*s,top:5.5*s})}
+function tree(x,z,s,group){group=group||'city';geo(group,'#8a5428',GEO.cyl(.35*s,.6*s,2.6*s,10),x,1.3*s,z,0,1,1,1,0,0,true);
+  for(let i=0;i<9;i++){const a=i*2.1,r=i?1.25*s:0,y=(i?3.6+(i%3)*.55:4.3)*s;geo(group,i%2?'#3fae3a':'#4fc24a',GEO.sph((i?1.25:1.7)*s,14,12),x+Math.cos(a)*r,y,z+Math.sin(a)*r,0,1,.9,1,0,0,true)}
+  for(let i=0;i<22;i++){const a=rand(0,TAU),b=rand(-.3,1.2),R=2.05*s;geo(group,Math.random()<.6?'#ff7ab4':'#fff4fa',GEO.sph(.13*s,6,4),x+Math.cos(a)*Math.cos(b)*R,4.1*s+Math.sin(b)*R*.9,z+Math.sin(a)*Math.cos(b)*R,0,1,.5,1,0,0,false)}
+  TREES.push({x,z,r:2.1*s,top:5.5*s})}
 function building(x,z,w,d,h,tex){box('city',tex,x-w/2,x+w/2,0,h,z-d/2,z+d/2,{tile:8,skip:'py'});box('city','#ffffff',x-w/2-.3,x+w/2+.3,h,h+.6,z-d/2-.3,z+d/2+.3,{ol:true});box('city',pick(['#ff4b2b','#4cc3ff','#5bd04a','#ffd23f']),x-w/2+1,x+w/2-1,h+.6,h+.75,z-d/2+1,z+d/2-1,{});
   if(Math.random()<.5)geo('city','#c0c8d8',GEO.cyl(1,1,2,12),x+rand(-w/4,w/4),h+1.6,z+rand(-d/4,d/4),0,1,1,1,0,0,true)}
 const CLOUDS=[];
@@ -698,7 +713,20 @@ function buildCity(){
   {const b=new THREE.Group();const env=new THREE.Mesh(GEO.sph(5,16,12),MATS.mattress);env.scale.y=1.15;b.add(env);outlined(env,true);for(let i=0;i<8;i++){const st=new THREE.Mesh(new THREE.SphereGeometry(5.05,16,12,i/8*TAU,TAU/16),MATS.mattressY);st.scale.y=1.15;b.add(st)}
     const bk=new THREE.Mesh(GEO.box(2,1.4,2),M('#a0663a'));bk.position.y=-8;b.add(bk);outlined(bk);for(const[x,z]of[[-.9,-.9],[.9,-.9],[.9,.9],[-.9,.9]]){const r=new THREE.Mesh(GEO.cyl(.05,.05,3,4),MATS.ink);r.position.set(x,-6,z);b.add(r)}
     b.position.set(-60,72,60);grp('sky').add(b);BALLOON.g=b}
+  // massifs de tournesols du parc
+  for(const[x,z]of[[-6,27],[-14,33],[3,30],[8,26],[-3,45],[12,40],[-18,40],[16,33]])for(let i=0;i<5;i++){const fx=x+rand(-.7,.7),fz=z+rand(-.7,.7),h=rand(1.1,1.7);geo('city','#3f9a32',GEO.cyl(.04,.05,h,6),fx,h/2,fz,0,1,1,1,0,0,true);geo('city','#4fbf45',GEO.sph(.16,8,6),fx+.12,h*.45,fz,0,1.4,.4,1,0,.4,true);
+    const yw=rand(-.6,.6);for(let p=0;p<10;p++){const a=p/10*TAU;geo('city','#ffcf1a',GEO.sph(.1,6,4),fx+Math.cos(a)*.2*Math.cos(yw),h+Math.sin(a)*.2,fz+Math.cos(a)*.2*Math.sin(yw)+.05,yw,1.4,.7,.5,0,a,false)}geo('city','#7a4422',GEO.cyl(.13,.13,.06,12),fx,h,fz+.07,yw,1,1,1,Math.PI/2,0,true)}
+  // voitures garées et voitures qui roulent sur l'avenue
+  for(const[x,z]of[[-38,13.3],[-50,18.7],[40,13.3],[54,18.7]]){const c=makeCar(pick(['#e8302a','#3b8cff','#ffcf1a','#5bd04a']));c.position.set(x,.06,z);c.rotation.y=z<16?Math.PI/2:-Math.PI/2;grp('city').add(c)}
+  for(let i=0;i<5;i++){const lane=i%2,c=makeCar(pick(['#e8302a','#3b8cff','#ffcf1a','#ff7ab4','#ffffff']));c.position.set(lane?32:28,.06,-200+i*45);c.rotation.y=lane?Math.PI:0;grp('city').add(c);ROADCARS.push({m:c,v:lane?-rand(9,13):rand(9,13)})}
 }
+const ROADCARS=[];
+// petite voiture jouet arrondie (avant vers +z)
+function makeCar(col){const g=new THREE.Group(),add=(G,m,x,y,z,ol)=>{const o=new THREE.Mesh(G,typeof m==='string'?M(m):m);o.position.set(x,y,z);g.add(o);if(ol!==false)outlined(o);return o};
+  add(GEO.rbox(1.7,.7,3.4,.32),col,0,.75,0);add(GEO.rbox(1.5,.75,1.9,.4),col,0,1.35,-.2);add(GEO.rbox(1.52,.5,1.6,.2),'#7ab8ff',0,1.4,-.2,false);add(GEO.rbox(1.56,.12,1.95,.06),col,0,1.72,-.2,false);
+  for(const sx of[-1,1]){for(const z of[-1.1,1.1]){const w=add(GEO.cyl(.36,.36,.3,16),'#2b2b38',sx*.82,.38,z);w.rotation.z=Math.PI/2;const h=add(GEO.cyl(.18,.18,.32,12),'#d8dce4',sx*.83,.38,z,false);h.rotation.z=Math.PI/2}
+    add(GEO.sph(.15,12,10),'#fff3c4',sx*.55,.85,1.68,false).scale.z=.5;add(GEO.rbox(.2,.12,.06,.03),'#ff5a4a',sx*.6,.85,-1.7,false)}
+  add(GEO.rbox(1.1,.18,.12,.06),'#d8dce4',0,.55,1.72,false);add(GEO.rbox(1.1,.18,.12,.06),'#d8dce4',0,.55,-1.72,false);return g}
 const BALLOON={g:null};
 
 /* ===================== Cabine d'ascenseur ===================== */
@@ -761,6 +789,8 @@ function makeChar(o){
   else if(hs==='curly'){for(let i=0;i<10;i++){const a=i/10*Math.PI*1.4-Math.PI*.2;mesh(GEO.sph(.1,10,8),H,Math.cos(a)*.22,.12+Math.sin(a)*.12,-.06,head)}mesh(GEO.sph(HR*1.02,16,12),H,0,.07,-.05,head).scale.set(1,.7,1)}
   else if(hs==='bald'){mesh(GEO.sph(.08,10,8),H,-.25,0,-.02,head);mesh(GEO.sph(.08,10,8),H,.25,0,-.02,head)}
   else if(hs==='helmet'){mesh(GEO.sph(HR*1.12,16,12),'#ffd23f',0,.06,0,head).scale.set(1,.8,1.05);mesh(GEO.cyl(HR*1.25,HR*1.3,.05,20),'#ffd23f',0,-.02,-.02,head);mesh(GEO.box(.08,.08,.06),'#c0c8d8',0,.12,HR*1.08,head)}
+  else if(hs==='afro'){const af=mesh(GEO.sph(.44,20,16),H,0,.2,-.24,head);af.scale.set(1.15,1,.85);for(let i=0;i<34;i++){const a=rand(0,TAU),b=rand(-.2,1.25),r=.44;const x=Math.cos(a)*Math.cos(b)*r*1.15,y=Math.sin(b)*r+.2,z=Math.sin(a)*Math.cos(b)*r*.85-.24;if(z>.02&&y<.42)continue;mesh(GEO.sph(rand(.07,.11),8,6),shade(H,rand(-.08,.08)),x,y,z,head,false)}}
+  else if(hs==='capBack'){mesh(GEO.sph(HR*1.03,16,12),H,0,.04,-.03,head).scale.set(1,.72,1);mesh(GEO.sph(HR*1.06,16,12),o.cap,0,.15,-.05,head).scale.set(1,.5,1);const br=mesh(GEO.rbox(.26,.03,.2,.012),o.cap,0,.06,-.3,head);br.rotation.x=-.25;mesh(GEO.rbox(.12,.03,.02,.01),shade(o.cap,-.2),0,.03,-.25,head,false);for(const sx of[-1,1])mesh(GEO.sph(.05,8,6),H,sx*.2,.1,.17,head,false)}
   else if(hs==='cap'){mesh(GEO.sph(HR*1.05,16,12),H,0,.06,-.03,head).scale.set(1,.72,1);mesh(GEO.box(.3,.03,.22),H,0,.07,.27,head)}
   if(o.glasses){for(const sx of[-1,1])mesh(GEO.tor(.07,.014,6,16),o.glasses,sx*.095,.05,HR*.95,head,false);mesh(GEO.box(.06,.015,.015),o.glasses,0,.06,HR*.97,head,false)}
   if(o.sunglasses){for(const sx of[-1,1])mesh(GEO.sph(.085,12,8),'#2b1838',sx*.1,.06,HR*.9,head,false).scale.set(1.1,.8,.4);mesh(GEO.box(.1,.02,.02),'#ffd23f',0,.09,HR*.97,head,false)}
@@ -778,11 +808,35 @@ function makeChar(o){
   // jambes
   for(const side of['L','R']){const sx=side==='L'?1:-1;const hp=new THREE.Group();hp.position.set(sx*.11*W,-.04,0);hips.add(hp);J['hip'+side]=hp;
     mesh(GEO.cyl(.085,.075,.34,10),o.bottom,0,-.17,0,hp);const kn=new THREE.Group();kn.position.y=-.33;hp.add(kn);J['kn'+side]=kn;
-    mesh(GEO.cyl(.072,.066,.3,10),o.shorts?o.skin:o.bottom,0,-.15,0,kn);mesh(GEO.sph(.095,10,8),o.shoes||'#3a2a2a',0,-.33,.05,kn).scale.set(1,.65,1.5)}
+    mesh(o.flare?GEO.cyl(.075,.15,.34,12):GEO.cyl(.072,.066,.3,10),o.shorts||o.skirt?(o.legs||o.skin):o.bottom,0,o.flare?-.17:-.15,0,kn);const sc=o.shoes||'#3a2a2a';
+    if(o.platform){mesh(GEO.rbox(.17,.1,.24,.045),sc,0,-.34,.04,kn);mesh(GEO.rbox(.18,.09,.26,.04),shade(sc,-.15),0,-.42,.04,kn)}
+    else if(o.boots){mesh(GEO.rbox(.19,.13,.28,.055),sc,0,-.34,.05,kn);mesh(GEO.rbox(.2,.05,.3,.02),shade(sc,-.35),0,-.41,.05,kn,false);if(o.laces)mesh(GEO.box(.1,.03,.1),o.laces,0,-.27,.12,kn,false)}
+    else if(o.slippers){mesh(GEO.sph(.11,12,8),sc,0,-.35,.05,kn).scale.set(1,.6,1.45);mesh(GEO.tor(.085,.03,6,14),'#f6efe2',0,-.3,.02,kn,false).rotation.x=Math.PI/2;mesh(GEO.sph(.03,8,6),'#ffb3d9',0,-.32,.16,kn,false)}
+    else if(o.sneakers){mesh(GEO.rbox(.17,.1,.27,.05),sc,0,-.34,.05,kn);mesh(GEO.rbox(.18,.045,.29,.02),o.sole||'#f4f4f8',0,-.4,.05,kn,false);mesh(GEO.box(.09,.02,.1),'#ffffff',0,-.29,.1,kn,false)}
+    else mesh(GEO.sph(.095,10,8),sc,0,-.33,.05,kn).scale.set(1,.65,1.5)}
+  outfit(o,J,torso,head,hips,HR,W);
   const sh=new THREE.Mesh(SHADOW_GEO,SHADOW_MAT);sh.rotation.x=-Math.PI/2;sh.position.y=.02;sh.renderOrder=1;g.add(sh);
   g.scale.setScalar(s);
   const ch={shadow:sh,g,J,o,s,blinkT:rand(1,4),talkT:0,emo:'neutre',HR,prop:null};
   return ch;
+}
+// détails de tenue fidèles aux illustrations des habitants
+function outfit(o,J,torso,head,hips,HR,W){const tr=.215*W;
+  if(o.crop){mesh(GEO.cyl(.205*W,.215*W,.13,16),o.skin,0,.1,0,torso,false);mesh(GEO.cyl(.21*W,.21*W,.13,16),o.crop,0,.26,0,torso,false);for(const sx of[-1,1]){const l=mesh(GEO.rbox(.07,.36,.05,.02),o.top,sx*.13*W,.27,.17*W,torso,false);l.rotation.z=sx*.12}mesh(GEO.rbox(.38*W,.07,.3*W,.03),o.top,0,.47,0,torso,false)}
+  if(o.hoops)for(const sx of[-1,1]){const h=mesh(GEO.tor(.07,.016,8,18),'#ffc81e',sx*.28,-.16,.02,head,false);h.rotation.y=Math.PI/2}
+  if(o.frames)for(const sx of[-1,1])mesh(GEO.tor(.09,.018,6,18),o.frames,sx*.1,.06,HR*.92,head,false);
+  if(o.cardigan){for(let i=0;i<4;i++)mesh(GEO.sph(.022,8,6),'#c8963c',0,.36-i*.1,tr+.01,torso,false);for(const sx of[-1,1])mesh(GEO.rbox(.12,.1,.03,.015),shade(o.top,-.1),sx*.12*W,.1,tr-.01,torso,false);
+    mesh(GEO.rbox(.16,.06,.06,.025),'#f6f0ff',0,.5,.12,torso,false);mesh(GEO.box(.06,.2,.02),'#f6f0ff',0,.38,tr-.005,torso,false)}
+  if(o.skirt){const sk=mesh(GEO.cyl(.22*W,.33*W,.4,18),o.skirt,0,-.2,0,hips);for(let i=0;i<9;i++){const a=i/9*TAU;mesh(GEO.sph(.035,8,6),'#c9a5ff',Math.sin(a)*.31*W,-.32,Math.cos(a)*.31*W,hips,false)}}
+  if(o.hoodie){const hd=mesh(new THREE.TorusGeometry(.15,.06,8,16,Math.PI*1.3),o.top,0,.53,-.06,torso,false);hd.rotation.x=Math.PI/2.4;mesh(GEO.rbox(.24*W,.1,.04,.02),shade(o.top,-.08),0,.1,tr-.005,torso,false);for(const sx of[-1,1]){mesh(GEO.cyl(.01,.01,.14,5),'#ffffff',sx*.05,.38,tr+.01,torso,false);mesh(GEO.sph(.018,6,4),'#ffffff',sx*.05,.3,tr+.01,torso,false)}}
+  if(o.neckPhones){const b=mesh(new THREE.TorusGeometry(.17,.035,6,18,Math.PI),'#2b2b38',0,.5,.04,torso,false);b.rotation.x=-Math.PI/2.2;for(const sx of[-1,1]){const c=mesh(GEO.cyl(.08,.08,.07,16),o.neckPhones,sx*.17,.5,.1,torso,false);c.rotation.z=Math.PI/2;mesh(GEO.cyl(.06,.06,.075,14),'#2b2b38',sx*.15,.5,.1,torso,false).rotation.z=Math.PI/2}}
+  if(o.toolbelt){mesh(GEO.cyl(.25*W,.25*W,.07,18),'#8a5a2b',0,.0,0,hips,false);mesh(GEO.rbox(.07,.05,.02,.01),'#c0c4cc',0,0,.25*W,hips,false);
+    for(const sx of[-1,1]){mesh(GEO.rbox(.11,.13,.06,.02),'#b0743a',sx*.19*W,-.07,.13*W,hips,false)}mesh(GEO.rbox(.03,.12,.03,.01),'#ffd23f',.17*W,.02,.14*W,hips,false);mesh(GEO.rbox(.09,.04,.04,.01),'#9aa0b0',.17*W,.09,.14*W,hips,false);mesh(GEO.cyl(.018,.018,.1,6),'#ff3b2b',-.2*W,.01,.14*W,hips,false);mesh(GEO.cyl(.03,.03,.04,10),'#ffd23f',-.15*W,-.02,.16*W,hips,false).rotation.x=Math.PI/2}
+  if(o.print){mesh(GEO.rbox(.16,.08,.02,.01),'#ff3b2b',0,.26,tr,torso,false);mesh(GEO.box(.06,.04,.01),'#bfe8ff',.05,.29,tr+.012,torso,false);for(const x of[-.05,.05])mesh(GEO.cyl(.022,.022,.02,10),'#2b2b38',x,.21,tr+.01,torso,false).rotation.x=Math.PI/2;mesh(GEO.box(.12,.015,.012),'#d0d4dc',-.01,.315,tr+.005,torso,false)}
+  if(o.stripes){for(const y of[.1,.32])mesh(GEO.cyl(.215*W,.215*W,.05,16),'#f2e93a',0,y,0,torso,false);for(const sx of[-1,1])mesh(GEO.cyl(.072,.072,.04,10),'#f2e93a',0,-.1,0,J['el'+(sx>0?'L':'R')],false);
+    mesh(GEO.rbox(.05,.04,.02,.01),'#ffd23f',.1,.42,tr,torso,false)}
+  if(o.ponytail){const pt=mesh(GEO.sph(.11,12,10),o.hair,0,.02,-.32,head);pt.scale.set(.8,1.6,.8);pt.rotation.x=.5}
+  if(o.bigBun){mesh(GEO.sph(.16,14,12),o.hair,0,.3,-.06,head)}
 }
 function addProp(ch,kind){const h=ch.J.handR;let m;
   if(kind==='phone'){m=mesh(GEO.box(.08,.15,.015),'#ff5ad2',0,-.05,.06,h)}
@@ -845,7 +899,7 @@ function makeDog(){const g=new THREE.Group(),J={};const c='#e8b07a';
   return{g,J}}
 function poseDog(d,t,mode){const J=d.J;J.tail.rotation.z=Math.sin(t*(mode==='happy'?20:6))*.6;J.head.rotation.x=mode==='bark'?Math.sin(t*20)*.15:0;d.g.position.y=(mode==='walk'?Math.abs(Math.sin(t*14))*.05:0);d.g.rotation.z=mode==='tremble'?Math.sin(t*50)*.04:0;J.legs.forEach((l,i)=>l.rotation.x=mode==='walk'?Math.sin(t*14+i*Math.PI)*.6:0)}
 /* pompier */
-function makeFirefighter(){return makeChar({skin:pick([SKINS.a,SKINS.b,SKINS.c]),hair:'#3a2a2a',hairStyle:'helmet',top:'#e8392c',bottom:'#2b2f5a',sleeve:'#e8392c',long:true,glove:'#ffd23f',shoes:'#2b1838',vest:true,mustache:Math.random()<.5?'#3a2a2a':null})}
+function makeFirefighter(woman){return makeChar({skin:pick([SKINS.a,SKINS.b,SKINS.c]),hair:woman?'#5a3220':'#7a4a2a',hairStyle:'helmet',top:'#e8392c',bottom:'#d8302a',sleeve:'#e8392c',long:true,glove:'#f2b63a',shoes:'#22222c',boots:true,stripes:true,ponytail:!!woman,mustache:woman?null:'#7a4a2a'})}
 /* ===================== Feu cartoon ===================== */
 const GX=24,GZ=16,NC=GX*GZ;
 const FIRE=[],FUEL=[],WET=[],EDGE_R=[],EDGE_D=[];
@@ -931,7 +985,7 @@ function makeCritter(){const g=new THREE.Group();
 function spawnCritter(k,x,z){if(CRIT.length>=4)return;const g=makeCritter();g.position.set(x,FY(k),z);grp('F'+k).add(g);CRIT.push({g,k,x,z,y:FY(k),vy:0,hp:1,t:rand(0,5),hop:0,target:null,cool:0});SFX.fwoosh()}
 /* ===================== Habitants ===================== */
 const RDEF=[
- {id:'josette',name:'Mamie Josette',f:'e',role:'Retraitée, 87 ans · 10e',col:'#c84a8a',conv:20,look:{skin:SKINS.a,hair:'#eeeef6',hairStyle:'bun',top:'#c84a8a',bottom:'#6b4a8a',glasses:'#c0a040',scale:.88},blip:520,
+ {id:'josette',name:'Mamie Josette',f:'e',role:'Retraitée, 87 ans · 10e',col:'#c84a8a',conv:20,look:{skin:SKINS.a,hair:'#f2f2f8',hairStyle:'bun',bigBun:true,top:'#c2187a',bottom:'#7b2fa8',skirt:'#7b2fa8',cardigan:true,long:true,glasses:'#d4a531',shoes:'#7b3fb0',slippers:true,scale:.88,headScale:1.1},blip:520,
   persona:"Mamie Josette, 87 ans, adorable mais dure d'oreille. Elle croit que le pompier est son petit-fils Jean-Mi. Elle tricote une écharpe et veut absolument qu'on goûte sa soupe aux poireaux. Elle ne partira jamais sans Cui-Cui, son canari.",
   key:"qu'on soit gentil et patient avec elle, qu'on accepte d'être son petit-fils Jean-Mi ou qu'on complimente sa soupe, et surtout qu'on promette d'emmener Cui-Cui le canari. Les messages en MAJUSCULES l'aident à entendre.",
   kw:['cui','canari','oiseau','soupe','poireau','jean','petit-fils','mamie','gentil','plaît','svp','tricot','écharpe'],
@@ -940,7 +994,7 @@ const RDEF=[
   ok:["Ah, tu es bien gentil, toi.","Tu ressembles à ton grand-père."],meh:["Hein ? Parle plus fort, mon chéri.","Tu veux un bonbon à la menthe ?"],
   bark:{idle:["Une maille à l'endroit, une à l'envers…","Cui-Cui, tu as faim ?","Ça sent le brûlé… mes poireaux !"],panic:["Mes poireaux !","Cui-Cui !!"],follow:["Attends-moi mon chéri !","Pas si vite, mes genoux !"],carry:["Comme au bal de 1962 !"],fly:["YOUPIIII !"]},
   end:"a tricoté une écharpe au chef Bernard pour le remercier."},
- {id:'kevin',name:'Kevin',f:'m',role:'Streamer · 10e',col:'#7a3cff',conv:10,look:{skin:SKINS.b,hair:'#3a2a2a',hairStyle:'cap',top:'#7a3cff',bottom:'#2b2f5a',headphones:true},blip:300,
+ {id:'kevin',name:'Kevin',f:'m',role:'Streamer · 10e',col:'#7a3cff',conv:10,look:{skin:SKINS.b,hair:'#5a3a22',hairStyle:'capBack',long:true,cap:'#6a2ee8',top:'#6a2ee8',bottom:'#1f2f7a',hoodie:true,neckPhones:'#ff3da8',shoes:'#ffffff',sneakers:true,sole:'#d8dce4'},blip:300,
   persona:"Kevin, 24 ans, streamer de jeux vidéo, en plein live. Il pense que le feu est un effet spécial ou un défi de ses viewers. Il parle avec du jargon de gamer (GG, nerf, OP, AFK, loot, boss final) et s'adresse souvent à son tchat.",
   key:"qu'on transforme l'évacuation en défi ou en quête de jeu vidéo : speedrun, succès débloqué, boss final, récompense, record du monde, ses viewers vont adorer.",
   kw:['speedrun','défi','quête','succès','boss','record','viewer','live','niveau','level','gg','loot','achievement','tchat','chrono','vues'],
@@ -949,7 +1003,7 @@ const RDEF=[
   ok:["Pas mal, ça. Le tchat valide.","GG, t'es chaud."],meh:["Le tchat dit que t'es AFK.","Tu bloques mon écran, frérot."],
   bark:{idle:["NOOON, le boss m'a eu !","Merci pour le follow !","Le tchat, c'est quoi cette fumée ?"],panic:["C'est pas un effet spécial ?!","Mon setup !"],follow:["Je stream tout, le tchat !","Lag pas, je te suis."],carry:["Mode passager activé !"],fly:["RAGE QUIIIIT !"]},
   end:"a fait 2 millions de vues avec son « speedrun incendie »."},
- {id:'didier',name:'Didier',f:'m',role:'Bricoleur · 10e',col:'#4cc3ff',conv:20,look:{skin:SKINS.b,hair:'#7a4a2a',hairStyle:'bald',top:'#4cc3ff',bottom:'#2b2f5a',mustache:'#7a4a2a',belly:true,wide:1.15},blip:220,prop:'hammer',
+ {id:'didier',name:'Didier',f:'m',role:'Bricoleur · 10e',col:'#4cc3ff',conv:20,look:{skin:SKINS.b,hair:'#5a3a22',hairStyle:'bald',top:'#6fb0ff',bottom:'#2a4fb0',mustache:'#5a3a22',belly:true,wide:1.18,toolbelt:true,shoes:'#a0622d',boots:true,laces:'#e8a03a'},blip:220,prop:'hammer',
   persona:"Didier Lebrun, 45 ans, papa bricoleur très fier de ses outils. Il est persuadé qu'il peut réparer le feu avec du scotch et sa perceuse. Il explique tout avec des termes de bricolage. Son fils Timéo, 8 ans, joue à côté.",
   key:"qu'on flatte ses talents de bricoleur et qu'on lui confie une mission importante : protéger son fils Timéo, porter la caisse à outils, ou superviser l'évacuation.",
   kw:['timéo','timeo','fils','mission','expert','outil','bricol','superviser','protéger','talent','meilleur','champion','perceuse'],
@@ -958,7 +1012,7 @@ const RDEF=[
   ok:["Ça, c'est du travail bien fait.","Vous avez l'œil, vous."],meh:["Passez-moi la clé de 12.","Il faudrait un niveau à bulle, là."],
   bark:{idle:["Un petit coup de scotch…","Où est ma clé de 12 ?","Ça va tenir, ça va tenir !"],panic:["Le scotch fond !","TIMÉO !"],follow:["Je ferme la marche !","Timéo, reste près de papa !"],carry:["Attention à mon dos !"],fly:["J'AURAIS DÛ PRENDRE MON PARACHUTE !"]},
   end:"veut maintenant réparer le camion de pompiers."},
- {id:'timeo',name:'Timéo',f:'m',role:'8 ans · 10e',col:'#ffd23f',conv:35,look:{skin:SKINS.c,hair:'#2b1a1a',hairStyle:'curly',top:'#ffd23f',bottom:'#4cc3ff',shorts:true,scale:.66,headScale:1.15},blip:700,prop:'plane',light:true,
+ {id:'timeo',name:'Timéo',f:'m',role:'8 ans · 10e',col:'#ffd23f',conv:35,look:{skin:SKINS.c,hair:'#1e1414',hairStyle:'curly',top:'#ffe23a',bottom:'#5aa8ff',shorts:true,print:true,shoes:'#e8312c',sneakers:true,scale:.66,headScale:1.2},blip:700,prop:'plane',light:true,
   persona:"Timéo, 8 ans, surexcité, adore les pompiers et croit que le pompier est un super-héros. Il pose plein de questions. Il veut voir le camion et faire pin-pon.",
   key:"qu'on lui promette de voir le camion de pompiers ou d'actionner la sirène, ou qu'on lui dise qu'il est un héros ou un apprenti pompier. Il suit aussi si son papa Didier suit déjà.",
   kw:['camion','sirène','pin','héros','pompier','apprenti','casque','super','aventure','papa','grande échelle'],
@@ -994,7 +1048,7 @@ const RDEF=[
   ok:["Pardon, oui, d'accord.","Merci… pardon."],meh:["Zzz… pardon…","Encore cinq minutes…"],
   bark:{idle:["Zzz…","Zzz… le tableur… Zzz…","Mmh… pardon…"],panic:["Pardon ! Pardon !","C'est pas un rêve ?!"],follow:["Pardon, je vous suis.","Pardon d'exister."],carry:["Pardon pour le poids."],fly:["PAAAAARDOOOON !"]},
   end:"a été embauché en CDI. Il dort déjà à son nouveau bureau."},
- {id:'gloria',name:'Gloria',f:'f',role:'Star de la pop · 12e',col:'#ff3d7f',conv:10,look:{skin:SKINS.d,hair:'#ff5ad2',hairStyle:'big',top:'#ffd23f',bottom:'#ff5ad2',sunglasses:true,earring:true},blip:600,prop:'phone',
+ {id:'gloria',name:'Gloria',f:'f',role:'Star de la pop · 12e',col:'#ff3d7f',conv:10,look:{skin:SKINS.d,hair:'#ff2f9e',hairStyle:'afro',long:true,top:'#ffcc1a',sleeve:'#ffcc1a',crop:'#ff2f9e',bottom:'#ff2f9e',flare:true,sunglasses:true,frames:'#ff2f9e',hoops:true,shoes:'#ff2f9e',platform:true},blip:600,prop:'phone',
   persona:"Gloria Paillette, diva de la pop, capricieuse et théâtrale. Elle parle d'elle-même à la troisième personne, exige d'être présentable et refuse de sortir comme une inconnue. Son garde du corps s'appelle Rocco et son chihuahua Bijou. Son stock de feux d'artifice pour son concert est dans la réserve.",
   key:"la flatterie : qu'on lui dise que ses fans l'attendent en bas, que ce sera une entrée de star, un tapis rouge, des paparazzi, le plus grand show de sa carrière.",
   kw:['fan','star','tapis','paparazzi','show','scène','magnifique','belle','sublime','diva','concert','icône','reine','public','légende','talent'],
@@ -1179,7 +1233,7 @@ function buildMattress(){OL_ON=false;const g=new THREE.Group();grp('ext').add(g)
   for(const s of[-1,1]){const r=new THREE.Mesh(GEO.cyl(.42,.42,4,16),MATS.mattressY);r.rotation.z=Math.PI/2;r.position.set(0,1.1,s*1.8);g.add(r);outlined(r);const r2=new THREE.Mesh(GEO.cyl(.42,.42,4,16),MATS.mattressY);r2.rotation.x=Math.PI/2;r2.position.set(s*1.8,1.1,0);g.add(r2);outlined(r2)}
   const top=new THREE.Mesh(new THREE.RingGeometry(.5,1.3,24),MATS.white);top.rotation.x=-Math.PI/2;top.position.y=1.42;g.add(top);const dot=new THREE.Mesh(new THREE.CircleGeometry(.5,24),MATS.mattress);dot.rotation.x=-Math.PI/2;dot.position.y=1.43;g.add(dot);
   MAT.g=g;MAT.base=base;
-  for(const[x,z]of[[-2.3,-2.3],[2.3,-2.3],[2.3,2.3],[-2.3,2.3]]){const f=makeFirefighter();f.g.position.set(x,0,z);f.g.rotation.y=Math.atan2(-x,-z);g.add(f.g);MAT.holders.push(f)}
+  for(const[x,z]of[[-2.3,-2.3],[2.3,-2.3],[2.3,2.3],[-2.3,2.3]]){const f=makeFirefighter(x*z>0);f.g.position.set(x,0,z);f.g.rotation.y=Math.atan2(-x,-z);g.add(f.g);MAT.holders.push(f)}
   OL_ON=true;const sh=new THREE.Mesh(new THREE.PlaneGeometry(6,6),new THREE.MeshBasicMaterial({map:TX.shadow,transparent:true,depthWrite:false}));sh.rotation.x=-Math.PI/2;sh.position.y=.14;g.add(sh)}
 const MAT_ZONE={x0:-15,x1:12,z0:10.5,z1:21};
 function predictLanding(){for(const R of[...RES,DOG]){if(!R||R.state!=='flying'||R.inside||R.landed)continue;const a=10,b=R.vy,c=R.y-1.6;const disc=b*b+4*a*c;if(disc<0)continue;const t=(b+Math.sqrt(disc))/(2*a);return{x:R.x+R.vx*t,z:R.z+R.vz*t,t}}return null}
@@ -1515,6 +1569,7 @@ function frame(ts){const rdt=Math.min(.05,(ts-last)/1000);last=ts;
     if(S.state==='finale'){S.finT+=Math.max(rdt,.05);if(Math.random()<.35){const col=pick(CONF_COLS);const d=lookDir();fireworkBurst(PL.x+d.x*30+rand(-14,14),FY(PL.k)+rand(4,18),PL.z+d.z*30+rand(-10,10),col,70);SFX.firework()}if(Math.random()<.2)confetti(PL.x+rand(-2,2),FY(PL.k)+3,PL.z+rand(-2,2),20);if(S.finT>4.5)showEnd()}
     // ambiance
     for(const c of CLOUDS){c.g.position.x+=c.v*rdt;if(c.g.position.x>300)c.g.position.x=-300}
+    for(const c of ROADCARS){c.m.position.z+=c.v*rdt;if(c.m.position.z>8&&c.v>0)c.m.position.z=-220;if(c.m.position.z<-220&&c.v<0)c.m.position.z=8}
     if(BALLOON.g){BALLOON.g.position.x+=rdt*1.2;BALLOON.g.position.y=72+Math.sin(S.t*.3)*3;if(BALLOON.g.position.x>200)BALLOON.g.position.x=-200}
     for(const d of DISCO){d.rotation.y+=rdt*1.2;d.material.emissive.setHSL((S.t*.2)%1,.8,.35)}
   }
